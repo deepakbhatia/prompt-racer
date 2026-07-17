@@ -1,0 +1,79 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+.yarn/
+.npm/
+
+# Build / generated
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+*.tsbuildinfo
+coverage/
+.nyc_output/
+
+# Env & secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+service-account*.json
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*~
+
+# Logs & debug
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Test / tooling caches
+.vitest/
+.eslintcache
+.prettiercache
+
+# Race sandboxes & ephemeral run artifacts (high volume — never commit)
+sandboxes/*
+!sandboxes/README.md
+.runs/
+.tmp/
+tmp/
+*.sandbox/
+
+# Challenge solution keys (keep private from contestants / public clones)
+challenges/**/golden/**
+!challenges/**/golden/.gitkeep
+challenges/**/solutions/
+challenges/**/.secret/
+
+# Large binaries & media dumps
+*.zip
+*.tar
+*.tar.gz
+*.tgz
+*.sqlite
+*.sqlite-journal
+*.db
+
+# Local agent / Codex / Cursor state
+.codex/
+.agent/
+.agents/cache/
+
+# Docs
+*.md
+!README.md

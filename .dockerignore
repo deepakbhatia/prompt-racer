@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build
+dist/
+.next/
+.turbo/
+coverage/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Race sandboxes
+sandboxes/*
+!sandboxes/README.md
+.runs/
+.tmp/
+
+# Private challenge material
+challenges/**/golden/**
+!challenges/**/golden/.gitkeep
+challenges/**/solutions/
+challenges/**/.secret/
+
+# Lockfiles & maps
+pnpm-lock.yaml
+**/*.map
+**/*.tsbuildinfo

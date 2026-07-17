@@ -1,0 +1,58 @@
+# Codex / coding-agent ignore (gitignore syntax).
+# Keep in sync with .cursorignore — same goal: skip high-token, low-signal trees.
+# Note: some Codex builds still rely primarily on .gitignore; keep both aggressive.
+
+# Dependencies
+node_modules/
+.pnpm-store/
+**/node_modules/
+
+# Build outputs
+dist/
+build/
+out/
+.next/
+.turbo/
+.cache/
+coverage/
+**/*.tsbuildinfo
+
+# Lockfiles
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Ephemeral race workspaces (can be megabytes per heat)
+sandboxes/*
+!sandboxes/README.md
+.runs/
+.tmp/
+tmp/
+**/*.sandbox/
+
+# Evaluator keys / golden solutions — never pull into prompt context by default
+challenges/**/golden/**
+!challenges/**/golden/.gitkeep
+challenges/**/solutions/
+challenges/**/.secret/
+
+# Noise
+*.log
+.DS_Store
+.idea/
+.codex/
+.agent/
+.agents/cache/
+
+# Minified / maps
+**/__snapshots__/
+**/*.min.js
+**/*.min.css
+**/*.map

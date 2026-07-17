@@ -1,0 +1,17 @@
+{
+  "name": "prompt-race",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Competitive benchmarking platform for AI-assisted development — race on prompt efficiency, not just speed.",
+  "packageManager": "pnpm@10.29.3",
+  "scripts": {
+    "dev": "pnpm --filter @prompt-race/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

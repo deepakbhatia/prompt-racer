@@ -1,0 +1,106 @@
+:root {
+  --bg0: #0c1210;
+  --bg1: #14201a;
+  --ink: #e8f0ea;
+  --muted: #9bb0a3;
+  --accent: #3dd68c;
+  --accent-dim: #1f8f5a;
+  --font-display: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", sans-serif;
+}
+
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=IBM+Plex+Sans:wght@400;500;600&display=swap");
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(1200px 600px at 10% -10%, #1a3d2e 0%, transparent 55%),
+    radial-gradient(900px 500px at 100% 0%, #0f2a22 0%, transparent 50%),
+    var(--bg0);
+  color: var(--ink);
+  font-family: var(--font-body);
+}
+
+.shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(1.5rem, 4vw, 4rem);
+  max-width: 52rem;
+}
+
+.brand {
+  font-family: var(--font-display);
+  font-size: clamp(2.5rem, 6vw, 4rem);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0 0 1rem;
+  color: var(--accent);
+  animation: rise 0.7s ease-out both;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 600;
+  line-height: 1.25;
+  margin: 0 0 0.75rem;
+  animation: rise 0.7s ease-out 0.08s both;
+}
+
+.lede {
+  color: var(--muted);
+  font-size: 1.05rem;
+  line-height: 1.55;
+  max-width: 36rem;
+  margin: 0 0 2rem;
+  animation: rise 0.7s ease-out 0.16s both;
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  animation: rise 0.7s ease-out 0.24s both;
+}
+
+.cta a {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.7rem 1.15rem;
+  border-radius: 0.35rem;
+  background: var(--accent);
+  color: #062016;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+
+.cta a:hover {
+  transform: translateY(-1px);
+  background: #5ee4a4;
+}
+
+.cta a.secondary {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
