@@ -8,18 +8,30 @@ export default function ChallengesPage() {
     <main className="shell">
       <p className="brand">Prompt Race</p>
       <h1>Challenges</h1>
-      <p className="lede">Public briefs only — golden solutions stay out of agent context.</p>
-      <ul style={{ listStyle: "none", padding: 0, margin: "0 0 2rem" }}>
+      <p className="lede">Pick a challenge. Build it with prompts only.</p>
+
+      <ul className="challenge-grid">
         {challenges.map((c) => (
-          <li key={c.id} style={{ marginBottom: "1.25rem" }}>
-            <strong>{c.title}</strong>
-            <div style={{ color: "var(--muted)", marginTop: "0.25rem" }}>{c.brief}</div>
-            <div style={{ color: "var(--muted)", fontSize: "0.9rem", marginTop: "0.35rem" }}>
-              {c.timeLimitSec / 60} min · {c.allowedStack.join(", ")}
-            </div>
+          <li key={c.id}>
+            <details className="challenge-card">
+              <summary>
+                <strong>{c.title}</strong>
+                <span aria-hidden="true" className="challenge-card__indicator" />
+              </summary>
+              <div className="challenge-card__details">
+                <p>{c.brief}</p>
+                <p className="challenge-card__meta">
+                  {c.timeLimitSec / 60} min · {c.allowedStack.join(", ")}
+                </p>
+                <Link href={`/challenges/${c.id}/workspace`} className="challenge-card__start">
+                  Start challenge
+                </Link>
+              </div>
+            </details>
           </li>
         ))}
       </ul>
+
       <div className="cta">
         <Link href="/" className="secondary">
           Back
