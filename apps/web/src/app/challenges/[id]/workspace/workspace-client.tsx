@@ -1,12 +1,9 @@
 
 "use client";
 
-import { useState, useTransition } from "react";
-import type { ChallengeSpec, PromptTurn } from "@prompt-race/shared";
-import { createStubAgents } from "@prompt-race/agent";
+import { useEffect, useRef, useState } from "react";
+import type { ChallengeSpec } from "@prompt-race/shared";
 import type { FeedItem } from "@/lib/workspace-types";
-
-const agents = createStubAgents();
 
 function nowIso() {
   return new Date().toISOString();
@@ -14,9 +11,11 @@ function nowIso() {
 
 export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [prompt, setPrompt] = useState("");
-  const [history, setHistory] = useState<PromptTurn[]>([]);
   const [feed, setFeed] = useState<FeedItem[]>([]);
-  const [pending, startTransition] = useTransition();
+  const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const hasStartedAttempt = useRef(false);
 
   function pushFeed(item: Omit<FeedItem, "id" | "at">) {
     setFeed((prev) => [
@@ -25,51 +24,70 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
     ]);
   }
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  useEffect(() => {
+    if (hasStartedAttempt.current) return;
+    hasStartedAttempt.current = true;
+
+    async function startAttempt() {
+      try {
+        const response = await fetch("/api/attempts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ challengeId: challenge.id }),
+        });
+        const data = (await response.json()) as { attempt?: { id: string }; error?: string };
+        if (!response.ok || !data.attempt) {
+          throw new Error(data.error ?? "Could not create an attempt.");
+        }
+        setAttemptId(data.attempt.id);
+        pushFeed({ kind: "system", text: `Attempt ${data.attempt.id} ready.` });
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "Could not create an attempt.");
+      }
+    }
+
+    void startAttempt();
+  }, [challenge.id]);
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     const text = prompt.trim();
-    if (!text || pending) return;
+    if (!text || !attemptId || pending) return;
 
     setPrompt("");
+    setPending(true);
+    setError(null);
     pushFeed({ kind: "user", text });
 
-    startTransition(async () => {
-      const verdict = await agents.scopeGuard(challenge, text);
-      if (!verdict.allowed) {
-        pushFeed({ kind: "guard", text: `Blocked: ${verdict.reason}` });
+    try {
+      const response = await fetch(`/api/attempts/${attemptId}/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: text }),
+      });
+      const data = (await response.json()) as {
+        blocked?: boolean;
+        reason?: string;
+        assistantMessage?: string;
+        filesTouched?: string[];
+        error?: string;
+      };
+      if (!response.ok) throw new Error(data.error ?? "Prompt could not be processed.");
+      if (data.blocked) {
+        pushFeed({ kind: "guard", text: `Blocked: ${data.reason ?? "Out of scope."}` });
         return;
       }
       pushFeed({ kind: "guard", text: "Allowed by scope guard." });
-
-      const result = await agents.builder(
-        challenge,
-        history,
-        verdict.sanitizedPrompt ?? text,
-        /* sandboxPath */ "",
-      );
-
-      const userTurn: PromptTurn = {
-        index: history.length,
-        role: "user",
-        content: text,
-        at: nowIso(),
-      };
-      const assistantTurn: PromptTurn = {
-        index: history.length + 1,
-        role: "assistant",
-        content: result.assistantMessage,
-        tokensIn: result.tokensIn,
-        tokensOut: result.tokensOut,
-        at: nowIso(),
-      };
-
-      setHistory((h) => [...h, userTurn, assistantTurn]);
       pushFeed({
         kind: "builder",
-        text: result.assistantMessage,
-        filesTouched: result.filesTouched,
+        text: data.assistantMessage ?? "Builder completed without a message.",
+        filesTouched: data.filesTouched ?? [],
       });
-    });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Prompt could not be processed.");
+    } finally {
+      setPending(false);
+    }
   }
 
   return (
@@ -82,12 +100,14 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe what to build…"
-          disabled={pending}
+          disabled={pending || !attemptId}
         />
-        <button type="submit" disabled={pending || !prompt.trim()}>
-          {pending ? "Working…" : "Send prompt"}
+        <button type="submit" disabled={pending || !attemptId || !prompt.trim()}>
+          {pending ? "Working…" : attemptId ? "Send prompt" : "Preparing sandbox…"}
         </button>
       </form>
+
+      {error && <p role="alert">{error}</p>}
 
       <ol className="activity-feed">
         {feed.length === 0 && (
