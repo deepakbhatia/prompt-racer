@@ -11,7 +11,8 @@
     "test": "echo \"no tests yet\""
   },
   "dependencies": {
-    "@prompt-race/shared": "workspace:*"
+    "@prompt-race/shared": "workspace:*",
+    "openai": "^6.48.0"
   },
   "devDependencies": {
     "typescript": "^5.8.2"

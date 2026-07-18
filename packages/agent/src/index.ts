@@ -53,6 +53,9 @@ export interface PromptRaceAgents {
   evaluator(input: EvaluatorInput): Promise<Pick<EvaluationResult, "passed" | "functionalScore" | "notes" | "disqualificationReason">>;
 }
 
+export { createOpenAIAgents } from "./agent";
+
+
 export function roleSystemPrompt(role: AgentRole, challenge: ChallengeSpec): string {
   switch (role) {
     case "scope_guard":

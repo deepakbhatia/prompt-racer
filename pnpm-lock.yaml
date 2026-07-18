@@ -25,6 +25,9 @@ importers:
       next:
         specifier: ^15.2.4
         version: 15.5.20(react-dom@19.2.7(react@19.2.7))(react@19.2.7)
+      openai:
+        specifier: ^6.48.0
+        version: 6.48.0
       react:
         specifier: ^19.0.0
         version: 19.2.7
@@ -50,6 +53,9 @@ importers:
       '@prompt-race/shared':
         specifier: workspace:*
         version: link:../shared
+      openai:
+        specifier: ^6.48.0
+        version: 6.48.0
     devDependencies:
       typescript:
         specifier: ^5.8.2
@@ -347,6 +353,26 @@ packages:
       sass:
         optional: true
 
+  openai@6.48.0:
+    resolution: {integrity: sha512-KhVp+FyV50QrXNextvL9hIU5l6ox5HYuKQjGVk7lIqprgJol90+dQXWONV6S1lRWsKA1bXjrow8RsUT14M1hNA==}
+    peerDependencies:
+      '@aws-sdk/credential-provider-node': '>=3.972.0 <4'
+      '@smithy/hash-node': '>=4.3.0 <5'
+      '@smithy/signature-v4': '>=5.4.0 <6'
+      ws: ^8.18.0
+      zod: ^3.25 || ^4.0
+    peerDependenciesMeta:
+      '@aws-sdk/credential-provider-node':
+        optional: true
+      '@smithy/hash-node':
+        optional: true
+      '@smithy/signature-v4':
+        optional: true
+      ws:
+        optional: true
+      zod:
+        optional: true
+
   picocolors@1.1.1:
     resolution: {integrity: sha512-xceH2snhtb5M9liqDsmEw56le376mTZkEX/jEb/RxNFyegNul7eNslCXP9FDj/Lcu0X8KEyMceP2ntpaHrDEVA==}
 
@@ -582,6 +608,8 @@ snapshots:
     transitivePeerDependencies:
       - '@babel/core'
       - babel-plugin-macros
+
+  openai@6.48.0: {}
 
   picocolors@1.1.1: {}
 
