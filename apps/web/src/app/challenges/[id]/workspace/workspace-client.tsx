@@ -12,7 +12,7 @@ function nowIso() {
 type StreamEvent =
   | { type: "guard"; allowed: boolean }
   | { type: "delta"; text: string }
-  | { type: "done"; assistantMessage: string }
+  | { type: "done"; assistantMessage: string; filesTouched?: string[] }
   | { type: "error"; message: string };
 
 function parseSseRecords(buffer: string) {
@@ -24,6 +24,10 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [prompt, setPrompt] = useState("");
   const [feed, setFeed] = useState<FeedItem[]>([]);
   const [attemptId, setAttemptId] = useState<string | null>(null);
+  const [files, setFiles] = useState<string[]>([]);
+  const [selectedFile, setSelectedFile] = useState<string | null>(null);
+  const [source, setSource] = useState<string | null>(null);
+  const [loadingFiles, setLoadingFiles] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasStartedAttempt = useRef(false);
@@ -33,6 +37,47 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
       ...prev,
       { ...item, id: crypto.randomUUID(), at: nowIso() },
     ]);
+  }
+
+  async function openFile(id: string, filePath: string) {
+    setSelectedFile(filePath);
+    setSource(null);
+    try {
+      const encodedPath = filePath.split("/").map(encodeURIComponent).join("/");
+      const response = await fetch(`/api/attempts/${id}/files/${encodedPath}`);
+      const data = (await response.json()) as { content?: string; error?: string };
+      if (!response.ok || data.content === undefined) {
+        throw new Error(data.error ?? "Could not read file.");
+      }
+      setSource(data.content);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not read file.");
+      setSource(null);
+    }
+  }
+
+  async function refreshFiles(id: string, preferredFile?: string) {
+    setLoadingFiles(true);
+    try {
+      const response = await fetch(`/api/attempts/${id}/files`);
+      const data = (await response.json()) as { files?: string[]; error?: string };
+      if (!response.ok || !data.files) throw new Error(data.error ?? "Could not load files.");
+      setFiles(data.files);
+      const nextFile =
+        (preferredFile && data.files.includes(preferredFile) && preferredFile) ||
+        (selectedFile && data.files.includes(selectedFile) && selectedFile) ||
+        data.files[0] ||
+        null;
+      if (nextFile) await openFile(id, nextFile);
+      else {
+        setSelectedFile(null);
+        setSource(null);
+      }
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not load files.");
+    } finally {
+      setLoadingFiles(false);
+    }
   }
 
   useEffect(() => {
@@ -52,6 +97,7 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
         }
         setAttemptId(data.attempt.id);
         pushFeed({ kind: "system", text: `Attempt ${data.attempt.id} ready.` });
+        await refreshFiles(data.attempt.id);
       } catch (cause) {
         setError(cause instanceof Error ? cause.message : "Could not create an attempt.");
       }
@@ -128,9 +174,22 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
           return;
         }
         receivedDone = true;
+        if (attemptId) void refreshFiles(attemptId, event.filesTouched?.at(-1));
         if (!builderItemId) {
-          pushFeed({ kind: "builder", text: event.assistantMessage });
+          pushFeed({
+            kind: "builder",
+            text: event.assistantMessage,
+            filesTouched: event.filesTouched ?? [],
+          });
+          return;
         }
+        setFeed((items) =>
+          items.map((item) =>
+            item.id === builderItemId
+              ? { ...item, text: event.assistantMessage || item.text, filesTouched: event.filesTouched ?? [] }
+              : item,
+          ),
+        );
       };
 
       while (true) {
@@ -160,6 +219,38 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
 
   return (
     <div className="workspace">
+      <section className="code-workspace" aria-label="Generated code">
+        <aside className="file-browser">
+          <div className="file-browser__header">
+            <strong>Files</strong>
+            <button type="button" onClick={() => attemptId && void refreshFiles(attemptId)} disabled={!attemptId || loadingFiles}>
+              {loadingFiles ? "Loading…" : "Refresh"}
+            </button>
+          </div>
+          {files.length === 0 ? (
+            <p className="file-browser__empty">No generated files yet.</p>
+          ) : (
+            <ul>
+              {files.map((filePath) => (
+                <li key={filePath}>
+                  <button
+                    type="button"
+                    className={filePath === selectedFile ? "is-selected" : undefined}
+                    onClick={() => attemptId && void openFile(attemptId, filePath)}
+                  >
+                    {filePath}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </aside>
+        <section className="code-viewer" aria-live="polite">
+          <div className="code-viewer__header">{selectedFile ?? "Select a file"}</div>
+          <pre>{source ?? "Select a file to inspect its generated source."}</pre>
+        </section>
+      </section>
+
       <form className="prompt-form" onSubmit={onSubmit}>
         <label htmlFor="prompt">Prompt</label>
         <textarea

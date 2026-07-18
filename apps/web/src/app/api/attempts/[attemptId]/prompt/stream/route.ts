@@ -2,7 +2,6 @@ import { getAgents } from "@/lib/agents";
 import { getChallenge } from "@/lib/challenges";
 import { getAttempt, updateAttempt } from "@/lib/attempts-store";
 import type { PromptTurn } from "@prompt-race/shared";
-import OpenAI from "openai";
 
 type Ctx = { params: Promise<{ attemptId: string }> };
 
@@ -38,11 +37,6 @@ export async function POST(req: Request, ctx: Ctx) {
     return Response.json({ blocked: true, reason: verdict.reason });
   }
 
-  const apiKey = process.env.OPENAI_API_KEY;
-  const client = apiKey
-    ? new OpenAI({ apiKey, baseURL: process.env.OPENAI_BASE_URL })
-    : undefined;
-
   const encoder = new TextEncoder();
   const stream = new ReadableStream({
     async start(controller) {
@@ -52,42 +46,13 @@ export async function POST(req: Request, ctx: Ctx) {
       send({ type: "guard", allowed: true });
 
       try {
-        let full = "";
-        console.log( process.env.OPENAI_MODEL ?? "gpt-5.6",)
-        if (client) {
-          const completion = await client.chat.completions.create({
-            model: process.env.OPENAI_MODEL ?? "gpt-5.6",
-            stream: true,
-            messages: [
-              {
-                role: "system",
-                content: `Build within challenge: ${challenge.title}. Sandbox: ${attempt.sandboxPath}`,
-              },
-              ...attempt.prompts.map((t) => ({
-                role: t.role as "user" | "assistant",
-                content: t.content,
-              })),
-              { role: "user", content: verdict.sanitizedPrompt ?? prompt },
-            ],
-          });
-
-          for await (const chunk of completion) {
-            const delta = chunk.choices[0]?.delta?.content ?? "";
-            if (delta) {
-              full += delta;
-              send({ type: "delta", text: delta });
-            }
-          }
-        } else {
-          const result = await agents.builder(
-            challenge,
-            attempt.prompts,
-            verdict.sanitizedPrompt ?? prompt,
-            attempt.sandboxPath,
-          );
-          full = result.assistantMessage;
-          if (full) send({ type: "delta", text: full });
-        }
+        const result = await agents.builder(
+          challenge,
+          attempt.prompts,
+          verdict.sanitizedPrompt ?? prompt,
+          attempt.sandboxPath,
+        );
+        if (result.assistantMessage) send({ type: "delta", text: result.assistantMessage });
 
         const at = new Date().toISOString();
         const userTurn: PromptTurn = {
@@ -99,14 +64,20 @@ export async function POST(req: Request, ctx: Ctx) {
         const assistantTurn: PromptTurn = {
           index: attempt.prompts.length + 1,
           role: "assistant",
-          content: full,
+          content: result.assistantMessage,
+          tokensIn: result.tokensIn,
+          tokensOut: result.tokensOut,
           at,
         };
         updateAttempt(attemptId, {
           prompts: [...attempt.prompts, userTurn, assistantTurn],
         });
 
-        send({ type: "done", assistantMessage: full });
+        send({
+          type: "done",
+          assistantMessage: result.assistantMessage,
+          filesTouched: result.filesTouched,
+        });
       } catch (cause) {
         console.error("Prompt stream failed", cause);
         const detail = cause instanceof Error ? cause.message : "Unknown server error.";

@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { createStubAgents } from "@prompt-race/agent";
+import { getAgents } from "@/lib/agents";
 import { getChallenge } from "@/lib/challenges";
 import { getAttempt, updateAttempt } from "@/lib/attempts-store";
 import type { PromptTurn } from "@prompt-race/shared";
-
-const agents = createStubAgents();
 
 type Ctx = { params: Promise<{ attemptId: string }> };
 
@@ -26,6 +24,7 @@ export async function POST(req: Request, ctx: Ctx) {
     return NextResponse.json({ error: "Empty prompt" }, { status: 400 });
   }
 
+  const agents = getAgents();
   const verdict = await agents.scopeGuard(challenge, text);
   if (!verdict.allowed) {
     return NextResponse.json({

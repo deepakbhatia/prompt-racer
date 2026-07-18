@@ -8,8 +8,12 @@ import {
   type PromptRaceAgents,
   type ScopeGuardVerdict,
 } from "./index";
+import { runBuilderWithTools } from "./builder-loop";
+import type { SandboxExecutor } from "./sandbox-executor";
 
-export function createOpenAIAgents(opts: AgentClientOptions): PromptRaceAgents {
+export function createOpenAIAgents(
+  opts: AgentClientOptions & { createExecutor: (sandboxPath: string) => SandboxExecutor },
+): PromptRaceAgents {
   const client = new OpenAI({
     apiKey: opts.apiKey,
     baseURL: opts.baseUrl,
@@ -34,31 +38,15 @@ export function createOpenAIAgents(opts: AgentClientOptions): PromptRaceAgents {
     },
 
     async builder(challenge, history, userPrompt, sandboxPath): Promise<BuilderResult> {
-      const historyMsgs = history.map((t) => ({
-        role: t.role as "user" | "assistant",
-        content: t.content,
-      }));
-
-      const res = await client.chat.completions.create({
+      return runBuilderWithTools({
+        client,
         model,
-        messages: [
-          { role: "system", content: roleSystemPrompt("builder", challenge) },
-          {
-            role: "system",
-            content: `Sandbox path: ${sandboxPath}. Describe files you would write. Prefer minimal diffs.`,
-          },
-          ...historyMsgs,
-          { role: "user", content: userPrompt },
-        ],
+        challenge,
+        history,
+        userPrompt,
+        sandboxPath,
+        executor: opts.createExecutor(sandboxPath),
       });
-
-      const message = res.choices[0]?.message?.content ?? "";
-      return {
-        assistantMessage: message,
-        filesTouched: [], // wire tool-calls / apply patches next
-        tokensIn: res.usage?.prompt_tokens,
-        tokensOut: res.usage?.completion_tokens,
-      };
     },
 
     async evaluator(input) {

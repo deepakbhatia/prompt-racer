@@ -219,6 +219,119 @@ h1 {
   margin-top: 1.5rem;
 }
 
+.code-workspace {
+  display: grid;
+  grid-template-columns: minmax(11rem, 0.35fr) minmax(0, 1fr);
+  min-height: 20rem;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 0.6rem;
+  background: #0a0f0c;
+}
+
+.file-browser {
+  padding: 0.75rem;
+  border-right: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  background: color-mix(in srgb, var(--bg1) 85%, #000);
+}
+
+.file-browser__header,
+.code-viewer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 1.8rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.file-browser__header button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.25rem 0.55rem;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.file-browser ul {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.file-browser li + li {
+  margin-top: 0.2rem;
+}
+
+.file-browser li button {
+  width: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0.25rem;
+  padding: 0.4rem 0.5rem;
+  background: transparent;
+  color: var(--ink);
+  cursor: pointer;
+  font: 0.82rem/1.35 ui-monospace, SFMono-Regular, Menlo, monospace;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-browser li button:hover,
+.file-browser li button.is-selected {
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
+.file-browser__empty {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.code-viewer {
+  min-width: 0;
+}
+
+.code-viewer__header {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.code-viewer pre {
+  overflow: auto;
+  min-height: 16rem;
+  margin: 0;
+  padding: 0.9rem;
+  color: #d9e8df;
+  font: 0.82rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  tab-size: 2;
+  white-space: pre;
+}
+
+@media (max-width: 640px) {
+  .code-workspace {
+    grid-template-columns: 1fr;
+  }
+
+  .file-browser {
+    border-right: 0;
+    border-bottom: 1px solid color-mix(in srgb, var(--accent) 25%, transparent);
+  }
+
+  .file-browser ul {
+    display: flex;
+    overflow-x: auto;
+    gap: 0.35rem;
+  }
+
+  .file-browser li + li {
+    margin-top: 0;
+  }
+}
+
 .prompt-form {
   display: flex;
   flex-direction: column;

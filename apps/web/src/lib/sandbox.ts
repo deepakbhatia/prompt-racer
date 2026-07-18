@@ -1,6 +1,14 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+export {
+  listSandboxFiles,
+  readSandboxFile,
+  resolveInSandbox,
+  SandboxPathError,
+  writeSandboxFile,
+} from "./sandbox-fs";
+
 // From apps/web, monorepo root is two levels up when cwd is apps/web.
 // Prefer an absolute root via env in production:
 const ROOT = process.env.SANDBOX_ROOT ?? path.join(process.cwd(), "sandboxes");

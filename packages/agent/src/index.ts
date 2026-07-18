@@ -54,6 +54,10 @@ export interface PromptRaceAgents {
 }
 
 export { createOpenAIAgents } from "./agent";
+export { runBuilderWithTools } from "./builder-loop";
+export { BUILDER_TOOLS } from "./tools";
+export type { BuilderToolName } from "./tools";
+export type { RunCommandResult, SandboxExecutor } from "./sandbox-executor";
 
 
 export function roleSystemPrompt(role: AgentRole, challenge: ChallengeSpec): string {
@@ -114,3 +118,5 @@ export function createStubAgents(): PromptRaceAgents {
     },
   };
 }
+
+export { executeBuilderTool } from "./sandbox-executor";
