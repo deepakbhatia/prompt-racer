@@ -2,6 +2,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Prism from "prismjs";
+import "prismjs/components/prism-bash";
+import "prismjs/components/prism-json";
+import "prismjs/components/prism-jsx";
+import "prismjs/components/prism-markdown";
+import "prismjs/components/prism-typescript";
+import "prismjs/components/prism-tsx";
 import type { ChallengeSpec } from "@prompt-race/shared";
 import type { FeedItem } from "@/lib/workspace-types";
 
@@ -20,6 +27,24 @@ function parseSseRecords(buffer: string) {
   return { records: records.slice(0, -1), remainder: records.at(-1) ?? "" };
 }
 
+function languageForFile(filePath: string | null) {
+  const extension = filePath?.split(".").at(-1)?.toLowerCase();
+  switch (extension) {
+    case "ts": return "typescript";
+    case "tsx": return "tsx";
+    case "js":
+    case "mjs":
+    case "cjs": return "javascript";
+    case "json": return "json";
+    case "html": return "markup";
+    case "css": return "css";
+    case "md": return "markdown";
+    case "sh":
+    case "bash": return "bash";
+    default: return "plain";
+  }
+}
+
 export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [prompt, setPrompt] = useState("");
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -31,6 +56,9 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasStartedAttempt = useRef(false);
+  const language = languageForFile(selectedFile);
+  const grammar = Prism.languages[language];
+  const highlightedSource = source && grammar ? Prism.highlight(source, grammar, language) : null;
 
   function pushFeed(item: Omit<FeedItem, "id" | "at">) {
     setFeed((prev) => [
@@ -247,7 +275,15 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
         </aside>
         <section className="code-viewer" aria-live="polite">
           <div className="code-viewer__header">{selectedFile ?? "Select a file"}</div>
-          <pre>{source ?? "Select a file to inspect its generated source."}</pre>
+          <pre className={`language-${language}`}>
+            {source === null ? (
+              "Select a file to inspect its generated source."
+            ) : highlightedSource ? (
+              <code dangerouslySetInnerHTML={{ __html: highlightedSource }} />
+            ) : (
+              <code>{source}</code>
+            )}
+          </pre>
         </section>
       </section>
 

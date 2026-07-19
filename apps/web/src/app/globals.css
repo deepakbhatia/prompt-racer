@@ -311,6 +311,53 @@ h1 {
   white-space: pre;
 }
 
+.code-viewer .token.comment,
+.code-viewer .token.prolog,
+.code-viewer .token.doctype,
+.code-viewer .token.cdata {
+  color: #718096;
+}
+
+.code-viewer .token.punctuation,
+.code-viewer .token.operator {
+  color: #b8c7c0;
+}
+
+.code-viewer .token.property,
+.code-viewer .token.tag,
+.code-viewer .token.boolean,
+.code-viewer .token.number,
+.code-viewer .token.constant,
+.code-viewer .token.symbol {
+  color: #73d9a8;
+}
+
+.code-viewer .token.selector,
+.code-viewer .token.attr-name,
+.code-viewer .token.string,
+.code-viewer .token.char,
+.code-viewer .token.builtin,
+.code-viewer .token.inserted {
+  color: #e6b979;
+}
+
+.code-viewer .token.atrule,
+.code-viewer .token.attr-value,
+.code-viewer .token.keyword {
+  color: #b79ced;
+}
+
+.code-viewer .token.function,
+.code-viewer .token.class-name {
+  color: #7ac7ef;
+}
+
+.code-viewer .token.regex,
+.code-viewer .token.important,
+.code-viewer .token.variable {
+  color: #f08c8c;
+}
+
 @media (max-width: 640px) {
   .code-workspace {
     grid-template-columns: 1fr;
