@@ -8,7 +8,7 @@
     "start": "next start",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "echo \"no lint yet\"",
-    "test": "echo \"no tests yet\""
+    "test": "tsx --test src/**/*.test.ts"
   },
   "dependencies": {
     "@prompt-race/agent": "workspace:*",

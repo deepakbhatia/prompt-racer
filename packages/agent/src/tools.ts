@@ -51,4 +51,26 @@ export const BUILDER_TOOLS: ChatCompletionTool[] = [
   },
 ];
 
-export type BuilderToolName = "list_files" | "read_file" | "write_file";
+export const RUN_COMMAND_TOOL: ChatCompletionTool = {
+  type: "function",
+  function: {
+    name: "run_command",
+    description:
+      "Run an allowlisted command inside the isolated sandbox. Use only to verify files you created.",
+    parameters: {
+      type: "object",
+      properties: {
+        command: { type: "string", description: "Executable: node, npm, pnpm, or npx" },
+        args: { type: "array", items: { type: "string" }, description: "Arguments only; no shell syntax" },
+      },
+      required: ["command"],
+      additionalProperties: false,
+    },
+  },
+};
+
+export function builderTools(canRunCommands: boolean): ChatCompletionTool[] {
+  return canRunCommands ? [...BUILDER_TOOLS, RUN_COMMAND_TOOL] : BUILDER_TOOLS;
+}
+
+export type BuilderToolName = "list_files" | "read_file" | "write_file" | "run_command";

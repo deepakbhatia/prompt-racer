@@ -6,7 +6,7 @@ import type {
 import type { ChallengeSpec, PromptTurn } from "@prompt-race/shared";
 import { roleSystemPrompt, type BuilderResult } from "./index";
 import { executeBuilderTool, type SandboxExecutor } from "./sandbox-executor";
-import { BUILDER_TOOLS } from "./tools";
+import { builderTools } from "./tools";
 
 const MAX_TOOL_ROUNDS = 20;
 export type BuilderToolEvent =
@@ -54,7 +54,7 @@ export async function runBuilderWithTools(options: BuilderLoopOptions): Promise<
     const response = await client.chat.completions.create({
       model,
       messages,
-      tools: BUILDER_TOOLS,
+      tools: builderTools(Boolean(executor.runCommand)),
       tool_choice: "auto",
       // gpt-5.6-luna only permits Chat Completions function tools when reasoning is disabled.
       reasoning_effort: "none",

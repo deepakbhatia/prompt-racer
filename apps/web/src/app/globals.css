@@ -358,6 +358,59 @@ h1 {
   color: #f08c8c;
 }
 
+.run-panel {
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent);
+  border-radius: 0.6rem;
+  background: #080c0a;
+}
+
+.run-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.run-panel__header button {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: var(--accent);
+  color: #062016;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.run-panel__header button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.run-panel__status,
+.run-panel__empty {
+  margin: 0;
+  padding: 0.6rem 0.75rem;
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.run-panel pre {
+  overflow: auto;
+  max-height: 16rem;
+  margin: 0;
+  padding: 0.8rem;
+  color: #d9e8df;
+  font: 0.82rem/1.55 ui-monospace, SFMono-Regular, Menlo, monospace;
+  white-space: pre-wrap;
+}
+
+.run-panel__stderr {
+  border-top: 1px solid color-mix(in srgb, #e85d5d 45%, transparent);
+  color: #f3a0a0 !important;
+}
+
 @media (max-width: 640px) {
   .code-workspace {
     grid-template-columns: 1fr;

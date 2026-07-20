@@ -9,7 +9,7 @@ import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-tsx";
-import type { ChallengeSpec } from "@prompt-race/shared";
+import type { ChallengeSpec, RunResult } from "@prompt-race/shared";
 import type { FeedItem } from "@/lib/workspace-types";
 
 function nowIso() {
@@ -56,6 +56,8 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [selectedFile, setSelectedFile] = useState<string | null>(null);
   const [source, setSource] = useState<string | null>(null);
   const [loadingFiles, setLoadingFiles] = useState(false);
+  const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [running, setRunning] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasStartedAttempt = useRef(false);
@@ -108,6 +110,23 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
       setError(cause instanceof Error ? cause.message : "Could not load files.");
     } finally {
       setLoadingFiles(false);
+    }
+  }
+
+  async function runAttempt() {
+    if (!attemptId || running) return;
+    setRunning(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/attempts/${attemptId}/run`, { method: "POST" });
+      const data = (await response.json()) as RunResult & { error?: string };
+      if (!response.ok) throw new Error(data.error ?? "Run failed.");
+      setRunResult(data);
+      pushFeed({ kind: "system", text: `Run finished with exit code ${data.exitCode}.` });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Run failed.");
+    } finally {
+      setRunning(false);
     }
   }
 
@@ -308,6 +327,24 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
             )}
           </pre>
         </section>
+      </section>
+
+      <section className="run-panel" aria-label="Run output">
+        <div className="run-panel__header">
+          <strong>Output</strong>
+          <button type="button" onClick={() => void runAttempt()} disabled={!attemptId || running}>
+            {running ? "Running…" : "Run challenge"}
+          </button>
+        </div>
+        {runResult ? (
+          <>
+            <p className="run-panel__status">Exit code: {runResult.exitCode}</p>
+            <pre>{runResult.stdout || runResult.stderr || "Command completed without output."}</pre>
+            {runResult.stdout && runResult.stderr && <pre className="run-panel__stderr">{runResult.stderr}</pre>}
+          </>
+        ) : (
+          <p className="run-panel__empty">Run the challenge-owned command to inspect its output.</p>
+        )}
       </section>
 
       <form className="prompt-form" onSubmit={onSubmit}>
