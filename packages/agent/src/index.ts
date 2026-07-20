@@ -8,6 +8,7 @@
  */
 
 import type { AgentRole, ChallengeSpec, EvaluationResult, PromptTurn } from "@prompt-race/shared";
+import type { BuilderToolEvent } from "./builder-loop";
 
 export const DEFAULT_MODEL = "gpt-5.6";
 
@@ -32,6 +33,10 @@ export interface BuilderResult {
   tokensOut?: number;
 }
 
+export interface BuilderOptions {
+  onEvent?: (event: BuilderToolEvent) => void;
+}
+
 export interface EvaluatorInput {
   challenge: ChallengeSpec;
   prompts: PromptTurn[];
@@ -49,12 +54,14 @@ export interface PromptRaceAgents {
     history: PromptTurn[],
     userPrompt: string,
     sandboxPath: string,
+    options?: BuilderOptions,
   ): Promise<BuilderResult>;
   evaluator(input: EvaluatorInput): Promise<Pick<EvaluationResult, "passed" | "functionalScore" | "notes" | "disqualificationReason">>;
 }
 
 export { createOpenAIAgents } from "./agent";
 export { runBuilderWithTools } from "./builder-loop";
+export type { BuilderLoopOptions, BuilderToolEvent } from "./builder-loop";
 export { BUILDER_TOOLS } from "./tools";
 export type { BuilderToolName } from "./tools";
 export type { RunCommandResult, SandboxExecutor } from "./sandbox-executor";

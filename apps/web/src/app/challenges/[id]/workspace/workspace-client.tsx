@@ -18,6 +18,9 @@ function nowIso() {
 
 type StreamEvent =
   | { type: "guard"; allowed: boolean }
+  | { type: "tool_start"; name: string; path?: string }
+  | { type: "tool_end"; name: string; ok: boolean; path?: string; bytes?: number }
+  | { type: "tool_error"; name: string; error: string }
   | { type: "delta"; text: string }
   | { type: "done"; assistantMessage: string; filesTouched?: string[] }
   | { type: "error"; message: string };
@@ -180,6 +183,26 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
             kind: "guard",
             text: event.allowed ? "Allowed by scope guard." : "Blocked by scope guard.",
           });
+          return;
+        }
+        if (event.type === "tool_start") {
+          pushFeed({
+            kind: "system",
+            text: `Using ${event.name}${event.path ? `: ${event.path}` : ""}`,
+          });
+          return;
+        }
+        if (event.type === "tool_end") {
+          const details = [
+            `${event.name} completed`,
+            event.path,
+            event.bytes === undefined ? undefined : `${event.bytes} bytes`,
+          ].filter(Boolean).join(" · ");
+          pushFeed({ kind: "system", text: details });
+          return;
+        }
+        if (event.type === "tool_error") {
+          pushFeed({ kind: "error", text: `${event.name} failed: ${event.error}` });
           return;
         }
         if (event.type === "error") throw new Error(event.message);

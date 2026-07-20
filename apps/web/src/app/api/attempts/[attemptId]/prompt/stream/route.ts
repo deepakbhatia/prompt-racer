@@ -51,6 +51,7 @@ export async function POST(req: Request, ctx: Ctx) {
           attempt.prompts,
           verdict.sanitizedPrompt ?? prompt,
           attempt.sandboxPath,
+          { onEvent: send },
         );
         if (result.assistantMessage) send({ type: "delta", text: result.assistantMessage });
 

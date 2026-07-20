@@ -4,6 +4,7 @@ import {
   DEFAULT_MODEL,
   roleSystemPrompt,
   type AgentClientOptions,
+  type BuilderOptions,
   type BuilderResult,
   type PromptRaceAgents,
   type ScopeGuardVerdict,
@@ -37,7 +38,13 @@ export function createOpenAIAgents(
       return JSON.parse(raw) as ScopeGuardVerdict;
     },
 
-    async builder(challenge, history, userPrompt, sandboxPath): Promise<BuilderResult> {
+    async builder(
+      challenge,
+      history,
+      userPrompt,
+      sandboxPath,
+      options?: BuilderOptions,
+    ): Promise<BuilderResult> {
       return runBuilderWithTools({
         client,
         model,
@@ -46,6 +53,7 @@ export function createOpenAIAgents(
         userPrompt,
         sandboxPath,
         executor: opts.createExecutor(sandboxPath),
+        onEvent: options?.onEvent,
       });
     },
 

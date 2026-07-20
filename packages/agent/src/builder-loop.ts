@@ -9,8 +9,12 @@ import { executeBuilderTool, type SandboxExecutor } from "./sandbox-executor";
 import { BUILDER_TOOLS } from "./tools";
 
 const MAX_TOOL_ROUNDS = 20;
+export type BuilderToolEvent =
+  | { type: "tool_start"; name: string; path?: string }
+  | { type: "tool_end"; name: string; ok: boolean; path?: string; bytes?: number }
+  | { type: "tool_error"; name: string; error: string };
 
-export async function runBuilderWithTools(options: {
+export interface BuilderLoopOptions {
   client: OpenAI;
   model: string;
   challenge: ChallengeSpec;
@@ -18,7 +22,11 @@ export async function runBuilderWithTools(options: {
   userPrompt: string;
   sandboxPath: string;
   executor: SandboxExecutor;
-}): Promise<BuilderResult> {
+  /** Receives safe metadata only; never complete write_file contents. */
+  onEvent?: (event: BuilderToolEvent) => void;
+}
+
+export async function runBuilderWithTools(options: BuilderLoopOptions): Promise<BuilderResult> {
   const { client, model, challenge, history, userPrompt, sandboxPath, executor } = options;
   const messages: ChatCompletionMessageParam[] = [
     { role: "system", content: roleSystemPrompt("builder", challenge) },
@@ -70,6 +78,19 @@ export async function runBuilderWithTools(options: {
 
     for (const call of toolCalls) {
       if (call.type !== "function") continue;
+      let displayPath: string | undefined;
+      try {
+        const args = JSON.parse(call.function.arguments || "{}") as { path?: unknown };
+        displayPath = typeof args.path === "string" ? args.path : undefined;
+      } catch {
+        // The executor returns the authoritative malformed-arguments error below.
+      }
+
+      options.onEvent?.({
+        type: "tool_start",
+        name: call.function.name,
+        path: displayPath,
+      });
       const result = await executeBuilderTool(call.function.name, call.function.arguments, executor);
 
       if (result.ok && call.function.name === "write_file") {
@@ -79,6 +100,26 @@ export async function runBuilderWithTools(options: {
         } catch {
           // The executor already returned a tool error for malformed arguments.
         }
+      }
+
+      if (!result.ok) {
+        options.onEvent?.({
+          type: "tool_error",
+          name: call.function.name,
+          error: result.error,
+        });
+      } else {
+        const writeResult =
+          typeof result.result === "object" && result.result !== null
+            ? (result.result as { path?: unknown; bytes?: unknown })
+            : {};
+        options.onEvent?.({
+          type: "tool_end",
+          name: call.function.name,
+          ok: true,
+          path: displayPath ?? (typeof writeResult.path === "string" ? writeResult.path : undefined),
+          bytes: typeof writeResult.bytes === "number" ? writeResult.bytes : undefined,
+        });
       }
 
       messages.push({
