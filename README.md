@@ -30,6 +30,20 @@ The score is deterministic. It combines functional completion with elapsed time
 and prompt efficiency (tokens and turns). Model feedback never overrides a
 failed platform-owned check.
 
+## Where Codex was used
+
+Codex assisted with the initial challenge seed and the implementation roadmap
+for the platform's build-and-evaluate loop, including:
+
+- live SSE tool activity, sandbox path-jail/tool-loop tests, and fixed
+  challenge-owned run and evaluation APIs;
+- isolated Docker-backed `run_command` support with resource limits, a
+  read-only filesystem, a writable attempt mount, scrubbed environment, and
+  bounded time/output;
+- the HTTP lifecycle and browser-runner design, deterministic submission and
+  scoring flow, persistence and coaching boundaries, approved runner-image
+  operations, and the local-to-Cloud Run architecture.
+
 ## Current capabilities
 
 - Public challenge catalogue: CLI, HTTP API, and browser-app exercises.
