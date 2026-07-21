@@ -406,6 +406,25 @@ h1 {
   white-space: pre-wrap;
 }
 
+.preview-panel {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.preview-panel iframe {
+  width: 100%;
+  min-height: 32rem;
+  border: 1px solid var(--border, #d1d5db);
+  border-radius: 0.5rem;
+  background: white;
+}
+
+.run-panel__checks {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+}
+
 .run-panel__stderr {
   border-top: 1px solid color-mix(in srgb, #e85d5d 45%, transparent);
   color: #f3a0a0 !important;

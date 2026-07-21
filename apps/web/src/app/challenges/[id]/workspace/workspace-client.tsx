@@ -57,6 +57,8 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [source, setSource] = useState<string | null>(null);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [preview, setPreview] = useState<{ url: string; expiresAt: string } | null>(null);
+  const [startingPreview, setStartingPreview] = useState(false);
   const [running, setRunning] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -127,6 +129,25 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
       setError(cause instanceof Error ? cause.message : "Run failed.");
     } finally {
       setRunning(false);
+    }
+  }
+
+  async function startPreview() {
+    if (!attemptId || startingPreview) return;
+    setStartingPreview(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/attempts/${attemptId}/preview`, { method: "POST" });
+      const data = (await response.json()) as { previewUrl?: string; expiresAt?: string; error?: string };
+      if (!response.ok || !data.previewUrl || !data.expiresAt) {
+        throw new Error(data.error ?? "Could not start preview.");
+      }
+      setPreview({ url: data.previewUrl, expiresAt: data.expiresAt });
+      pushFeed({ kind: "system", text: "Browser preview is ready." });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Could not start preview.");
+    } finally {
+      setStartingPreview(false);
     }
   }
 
@@ -339,11 +360,36 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
         {runResult ? (
           <>
             <p className="run-panel__status">Exit code: {runResult.exitCode}</p>
+            {runResult.checks && runResult.checks.length > 0 && (
+              <ul className="run-panel__checks">
+                {runResult.checks.map((check) => (
+                  <li key={check.id}>{check.passed ? "✓" : "×"} {check.id}: {check.detail}</li>
+                ))}
+              </ul>
+            )}
             <pre>{runResult.stdout || runResult.stderr || "Command completed without output."}</pre>
             {runResult.stdout && runResult.stderr && <pre className="run-panel__stderr">{runResult.stderr}</pre>}
           </>
         ) : (
           <p className="run-panel__empty">Run the challenge-owned command to inspect its output.</p>
+        )}
+        {challenge.id === "reading-list" && (
+          <div className="preview-panel">
+            <button type="button" onClick={() => void startPreview()} disabled={!attemptId || startingPreview}>
+              {startingPreview ? "Starting preview…" : "Open preview"}
+            </button>
+            {preview && (
+              <>
+                <p className="run-panel__status">Preview expires {new Date(preview.expiresAt).toLocaleTimeString()}.</p>
+                <iframe
+                  src={preview.url}
+                  title="Challenge preview"
+                  sandbox="allow-scripts allow-forms"
+                  referrerPolicy="no-referrer"
+                />
+              </>
+            )}
+          </div>
         )}
       </section>
 

@@ -1,15 +1,41 @@
-import type { RunProfile } from "@prompt-race/shared";
+import type { ChallengeRuntimeProfile } from "@prompt-race/shared";
 
-// Keep this registry server-side. A contestant cannot choose its command or arguments.
-const RUN_PROFILES: Record<string, RunProfile> = {
-  // The brief permits any documented CLI entrypoint, so list generated scripts
-  // rather than assuming a task name or command arguments.
-  "todo-cli": { command: "npm", args: ["run"], timeoutMs: 5_000 },
-  "hello-http": { command: "npm", args: ["run", "start"], timeoutMs: 5_000 },
-  "notes-api": { command: "npm", args: ["run", "start"], timeoutMs: 5_000 },
-  "reading-list": { command: "npm", args: ["run", "dev"], timeoutMs: 5_000 },
+// Keep this registry server-side. A contestant cannot choose commands, images,
+// ports, probes, or Docker flags. Production resolves logical image names to
+// pinned digests in the runner service.
+const RUNTIME_PROFILES: Record<string, ChallengeRuntimeProfile> = {
+  "todo-cli": {
+    kind: "cli",
+    image: "prompt-race/node-cli:22",
+    command: ["npm", "run", "start"],
+    timeoutMs: 10_000,
+  },
+  "hello-http": {
+    kind: "http",
+    image: "prompt-race/node-http:22",
+    command: ["npm", "run", "start"],
+    port: 3000,
+    readiness: { path: "/", expectedStatus: 200 },
+    timeoutMs: 15_000,
+  },
+  "notes-api": {
+    kind: "http",
+    image: "prompt-race/node-http:22",
+    command: ["npm", "run", "start"],
+    port: 3000,
+    readiness: { path: "/notes", expectedStatus: 200 },
+    timeoutMs: 15_000,
+  },
+  "reading-list": {
+    kind: "browser",
+    image: "prompt-race/web-preview:22",
+    command: ["npm", "run", "dev"],
+    port: 3000,
+    readiness: { path: "/", expectedStatus: 200 },
+    timeoutMs: 20_000,
+  },
 };
 
-export function getRunProfile(challengeId: string) {
-  return RUN_PROFILES[challengeId];
+export function getRuntimeProfile(challengeId: string) {
+  return RUNTIME_PROFILES[challengeId];
 }
