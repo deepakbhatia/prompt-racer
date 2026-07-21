@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getAgents } from "@/lib/agents";
 import { getChallenge } from "@/lib/challenges";
 import { getAttempt, updateAttempt } from "@/lib/attempts-store";
+import { getWorkspaceStore } from "@/lib/workspace-store";
 import type { PromptTurn } from "@prompt-race/shared";
 
 type Ctx = { params: Promise<{ attemptId: string }> };
@@ -33,11 +34,8 @@ export async function POST(req: Request, ctx: Ctx) {
     });
   }
 
-  const result = await agents.builder(
-    challenge,
-    attempt.prompts,
-    verdict.sanitizedPrompt ?? text,
-    attempt.sandboxPath,
+  const result = await getWorkspaceStore().withWorkspace(attempt.sandboxRef, (sandboxPath) =>
+    agents.builder(challenge, attempt.prompts, verdict.sanitizedPrompt ?? text, sandboxPath),
   );
 
   const at = new Date().toISOString();

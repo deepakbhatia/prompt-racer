@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getChallenge } from "@/lib/challenges";
-import { createSandbox } from "@/lib/sandbox";
 import { saveAttempt } from "@/lib/attempts-store";
+import { getWorkspaceStore } from "@/lib/workspace-store";
 import type { RaceAttempt } from "@prompt-race/shared";
 
 export async function POST(req: Request) {
@@ -17,7 +17,8 @@ export async function POST(req: Request) {
 
   const attemptId = crypto.randomUUID();
   const raceId = "solo"; // single-player heats for now
-  const sandboxPath = await createSandbox(raceId, attemptId, challenge.id);
+  const sandboxRef = `${raceId}/${attemptId}`;
+  const sandboxPath = await getWorkspaceStore().create(sandboxRef, challenge.id);
 
   const attempt: RaceAttempt = {
     id: attemptId,
@@ -26,7 +27,7 @@ export async function POST(req: Request) {
     challengeId: challenge.id,
     status: "running",
     startedAt: new Date().toISOString(),
-    sandboxRef: `${raceId}/${attemptId}`,
+    sandboxRef,
     prompts: [],
     sandboxPath,
   };

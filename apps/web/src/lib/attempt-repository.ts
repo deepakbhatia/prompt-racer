@@ -2,6 +2,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { EvaluationResult, PostRunAnalysis, RaceAttempt, RunResult } from "@prompt-race/shared";
 import { sandboxPathFor } from "./sandbox";
+import { FirestoreAttemptRepository } from "./firestore-attempt-repository";
 
 export interface StoredToolEvent {
   sequence: number;
@@ -187,9 +188,11 @@ declare global {
 
 export function getAttemptRepository(): AttemptRepository {
   if (!globalThis.promptRaceAttemptRepository) {
-    globalThis.promptRaceAttemptRepository = process.env.ATTEMPT_REPOSITORY === "memory"
-      ? new InMemoryAttemptRepository()
-      : new JsonFileAttemptRepository(developmentRepositoryPath());
+    globalThis.promptRaceAttemptRepository = process.env.ATTEMPT_REPOSITORY === "firestore"
+      ? new FirestoreAttemptRepository()
+      : process.env.ATTEMPT_REPOSITORY === "memory"
+        ? new InMemoryAttemptRepository()
+        : new JsonFileAttemptRepository(developmentRepositoryPath());
   }
   return globalThis.promptRaceAttemptRepository;
 }

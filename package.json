@@ -9,7 +9,8 @@
     "build": "pnpm -r build",
     "typecheck": "pnpm -r typecheck",
     "lint": "pnpm -r lint",
-    "test": "pnpm -r test"
+    "test": "pnpm -r test",
+    "prepull:runner-images": "node scripts/prepull-runner-images.mjs"
   },
   "engines": {
     "node": ">=20"

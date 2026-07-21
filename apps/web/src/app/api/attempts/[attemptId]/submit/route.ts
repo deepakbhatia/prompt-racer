@@ -3,6 +3,7 @@ import { runAcceptanceChecks } from "@/lib/challenge-runner";
 import { getChallenge } from "@/lib/challenges";
 import { saveEvaluation, savePostRunAnalysis, saveRun, submitAttempt, updateAttempt } from "@/lib/attempts-store";
 import { createPostRunAnalysis } from "@/lib/post-run-coach";
+import { getWorkspaceStore } from "@/lib/workspace-store";
 import { computeEvaluation } from "@prompt-race/scoring";
 
 type Context = { params: Promise<{ attemptId: string }> };
@@ -31,13 +32,15 @@ export async function POST(_request: Request, { params }: Context) {
     }];
     const deterministicFunctionalScore = checkResults.filter((check) => check.passed).length / checkResults.length;
     const elapsedSec = Math.max(0, (Date.now() - Date.parse(attempt.startedAt)) / 1_000);
-    const qualitative = await getAgents().evaluator({
-      challenge,
-      prompts: attempt.prompts,
-      sandboxPath: attempt.sandboxPath,
-      elapsedSec,
-      checkResults,
-    });
+    const qualitative = await getWorkspaceStore().withWorkspace(attempt.sandboxRef, (sandboxPath) =>
+      getAgents().evaluator({
+        challenge,
+        prompts: attempt.prompts,
+        sandboxPath,
+        elapsedSec,
+        checkResults,
+      }),
+    );
 
     // An LLM can explain the evidence, but never overturn a failing deterministic check.
     const passed = deterministicFunctionalScore === 1 && qualitative.passed;

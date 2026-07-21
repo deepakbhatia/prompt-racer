@@ -387,7 +387,7 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
             {running ? "Running…" : "Run challenge"}
           </button>
           <button type="button" onClick={() => void submitAttempt()} disabled={!attemptId || pending || submitting || !!submission}>
-            {submitting ? "Submitting…" : submission ? "Submitted" : "Submit challenge"}
+            {submitting ? "Submitting…" : submission ? "Submitted" : "Complete challenge"}
           </button>
         </div>
         {runResult ? (

@@ -1,6 +1,7 @@
 import { spawn } from "node:child_process";
 import path from "node:path";
 import type { RunCommandResult } from "@prompt-race/agent";
+import { resolveApprovedRunnerImage } from "./runner/images";
 
 const ALLOWED = new Set(["node", "npm", "pnpm", "npx"]);
 
@@ -87,7 +88,7 @@ export async function runInSandbox(
  * Fixed challenge run profiles may use runInSandbox during local development.
  */
 export function modelCommandExecutionEnabled() {
-  return process.env.SANDBOX_RUNNER === "docker";
+  return process.env.SANDBOX_RUNNER === "docker" || process.env.RUNNER_BACKEND === "cloud-run-sandbox";
 }
 
 function localDevelopmentExecutionEnabled() {
@@ -152,7 +153,7 @@ export async function runInIsolatedSandbox(
     "/work",
     "--env",
     "HOME=/tmp",
-    "node:22-alpine",
+    resolveApprovedRunnerImage("prompt-race/node-cli:22"),
     command,
     ...args,
   ];

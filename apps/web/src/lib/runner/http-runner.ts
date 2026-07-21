@@ -2,14 +2,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import type { ChallengeRuntimeProfile, RunCheckResult, RunResult } from "@prompt-race/shared";
 import type { HttpProbe, ManagedRun } from "./types";
-
-const IMAGE_BY_LOGICAL_NAME: Record<ChallengeRuntimeProfile["image"], string> = {
-  // Local development fallback. Deployments should replace these with pinned
-  // private-registry digests in a separate runner service.
-  "prompt-race/node-cli:22": "node:22-alpine",
-  "prompt-race/node-http:22": "node:22-alpine",
-  "prompt-race/web-preview:22": "node:22-alpine",
-};
+import { resolveApprovedRunnerImage } from "./images";
 
 function runDocker(args: string[]): Promise<{ stdout: string; stderr: string; exitCode: number }> {
   return new Promise((resolve) => {
@@ -60,7 +53,7 @@ export async function startHttpRun(input: {
   command: string[];
   containerPort: number;
 }): Promise<ManagedRun> {
-  const image = IMAGE_BY_LOGICAL_NAME[input.image];
+  const image = resolveApprovedRunnerImage(input.image);
   const sandboxPath = path.resolve(input.sandboxPath);
   const launch = await runDocker([
     "run", "-d", "--rm",

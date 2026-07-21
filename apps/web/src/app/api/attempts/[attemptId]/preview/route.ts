@@ -19,6 +19,12 @@ export async function POST(_request: Request, { params }: Context) {
   if (!profile || profile.kind !== "browser") {
     return Response.json({ error: "This challenge does not support a browser preview." }, { status: 409 });
   }
+  if (process.env.RUNNER_BACKEND === "cloud-run-sandbox") {
+    return Response.json(
+      { error: "Cloud Run browser previews require the named-sandbox preview runner, which is not configured yet." },
+      { status: 501 },
+    );
+  }
 
   try {
     const run = await startHttpRun({

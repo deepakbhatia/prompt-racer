@@ -1,6 +1,7 @@
 import { getAgents } from "@/lib/agents";
 import { getChallenge } from "@/lib/challenges";
 import { appendToolEvent, getAttempt, updateAttempt } from "@/lib/attempts-store";
+import { getWorkspaceStore } from "@/lib/workspace-store";
 import type { PromptTurn } from "@prompt-race/shared";
 
 type Ctx = { params: Promise<{ attemptId: string }> };
@@ -47,11 +48,11 @@ export async function POST(req: Request, ctx: Ctx) {
 
       try {
         const toolEvents: Promise<void>[] = [];
-        const result = await agents.builder(
+        const result = await getWorkspaceStore().withWorkspace(attempt.sandboxRef, (sandboxPath) => agents.builder(
           challenge,
           attempt.prompts,
           verdict.sanitizedPrompt ?? prompt,
-          attempt.sandboxPath,
+          sandboxPath,
           {
             onEvent: (event) => {
               send(event);
@@ -64,7 +65,7 @@ export async function POST(req: Request, ctx: Ctx) {
               }));
             },
           },
-        );
+        ));
         if (result.assistantMessage) send({ type: "delta", text: result.assistantMessage });
 
         const at = new Date().toISOString();
