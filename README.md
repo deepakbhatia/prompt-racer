@@ -127,8 +127,82 @@ These values are server-side only:
 
 Cloud mode also requires `GOOGLE_CLOUD_PROJECT` and `WORKSPACE_BUCKET` plus a
 Cloud Run service account with the minimum required Firestore and Cloud Storage
-permissions. See [guide-sandbox-tools.md](guide-sandbox-tools.md#19-dual-local-and-cloud-run-development-environments)
-for the migration and deployment guide.
+permissions.
+
+## Migration and deployment
+
+### Migrate incrementally
+
+Keep the three backend choices independent so the application can move to cloud
+in small, reversible steps:
+
+1. Start locally with `ATTEMPT_REPOSITORY=json`, `WORKSPACE_BACKEND=local-fs`,
+   and `RUNNER_BACKEND=docker`.
+2. Create a Firestore database and deploy the app with
+   `ATTEMPT_REPOSITORY=firestore`. Confirm that attempts, submitted results,
+   tool events, run results, and coaching reports persist after a service
+   restart.
+3. Create a private Cloud Storage bucket and set
+   `WORKSPACE_BACKEND=cloud-storage` plus `WORKSPACE_BUCKET`. New attempt
+   workspaces are materialized for an operation and synced back to
+   `workspaces/<race>/<attemptId>/` in the bucket.
+4. When the runner image and sandbox permissions are ready, set
+   `RUNNER_BACKEND=cloud-run-sandbox`. This currently supports isolated CLI
+   commands; HTTP lifecycle execution and browser previews/acceptance remain
+   local-runner features until their cloud workers are added.
+
+Do not place service-account keys in `.env` or commit them. Local development
+can use Application Default Credentials; deployed Cloud Run revisions should
+use an attached service account with least-privilege access.
+
+### Cloud Run demo deployment
+
+A demo deployment consists of one Cloud Run service for the Next.js UI and API,
+Firestore for attempt records, Cloud Storage for workspaces, Secret Manager for
+`OPENAI_API_KEY`, and Cloud Run Sandboxes for supported execution commands.
+
+Before deploying:
+
+- Enable Cloud Run, Firestore, Cloud Storage, Artifact Registry, and Secret
+  Manager for the Google Cloud project.
+- Create a private workspace bucket and Firestore database in the intended
+  region.
+- Give the runtime service account only the Firestore and bucket permissions it
+  needs, plus permission to read the OpenAI key secret.
+- Build and publish the web image to Artifact Registry. The image used for a
+  sandbox-enabled Cloud Run service must include the command-line tools needed
+  by approved runner profiles, such as Node and npm.
+- Configure the environment variables above and inject `OPENAI_API_KEY` from
+  Secret Manager rather than a plain environment value.
+
+Deploy the service with the Cloud Run sandbox launcher enabled (substitute your
+region, project, repository, and image tag):
+
+```bash
+gcloud beta run deploy prompt-race-web \
+  --image REGION-docker.pkg.dev/PROJECT/REPOSITORY/prompt-race-web:TAG \
+  --sandbox-launcher
+```
+
+Then configure the service with `ATTEMPT_REPOSITORY=firestore`,
+`WORKSPACE_BACKEND=cloud-storage`, `RUNNER_BACKEND=cloud-run-sandbox`,
+`GOOGLE_CLOUD_PROJECT`, and `WORKSPACE_BUCKET`. Keep the sandbox network
+restricted unless a challenge explicitly requires outbound access; never expose
+the platform's API keys or production credentials to a contestant workspace.
+
+### Deployment readiness checklist
+
+- Verify that a new attempt is stored in Firestore and its workspace appears in
+  the Cloud Storage bucket.
+- Submit a CLI challenge and confirm that logs, checks, score, and coaching are
+  persisted and visible after refreshing the UI.
+- Set Cloud Run request and command timeouts to values appropriate for the
+  challenge, with bounded runner output and cleanup enabled.
+- Send structured logs and runner failures to Cloud Logging; add alerts for
+  repeated failed runs and unexpected sandbox usage.
+- Treat HTTP and browser execution as a separate rollout: they need a named
+  sandbox lifecycle/preview service and a private browser-acceptance worker,
+  which are not configured in the current cloud backend.
 
 ## Verification
 
@@ -138,10 +212,3 @@ pnpm --filter @prompt-race/agent typecheck
 pnpm --filter @prompt-race/scoring typecheck
 pnpm --filter @prompt-race/web typecheck
 ```
-
-## Project story
-
-See [PROJECT_STORY.md](PROJECT_STORY.md) for the developer-education-focused
-submission narrative.
-
-See [AGENTS.md](AGENTS.md) for repository conventions and safety boundaries.
