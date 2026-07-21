@@ -2,7 +2,7 @@
 
 export type RaceStatus = "lobby" | "live" | "scoring" | "finished";
 
-export type AgentRole = "builder" | "scope_guard" | "evaluator";
+export type AgentRole = "builder" | "scope_guard" | "evaluator" | "coach";
 
 export interface ChallengeSpec {
   id: string;
@@ -43,6 +43,8 @@ export interface RaceAttempt {
   checkResults?: RunCheckResult[];
   /** Final, deterministic leaderboard result for a completed attempt. */
   evaluation?: EvaluationResult;
+  /** Informational post-run guidance. It never influences scoring. */
+  postRunAnalysis?: PostRunAnalysis;
   prompts: PromptTurn[];
   /** Ephemeral host path, resolved from sandboxRef by the server only. */
   sandboxPath: string;
@@ -63,6 +65,17 @@ export interface EvaluationResult {
   compositeScore: number;
   notes: string[];
   disqualificationReason?: string;
+}
+
+/** Informational coaching generated after deterministic scoring completes. */
+export interface PostRunAnalysis {
+  attemptId: string;
+  summary: string;
+  timeLosses: { promptTurn: number; issue: string; impact: "low" | "medium" | "high" }[];
+  redundantPrompts: { promptTurn: number; reason: string }[];
+  recommendations: string[];
+  /** Aggregate-only observations; empty when no benchmark metrics exist. */
+  topRunnerComparison: string[];
 }
 
 /** Output from a platform-owned command run for one attempt. */

@@ -1,7 +1,8 @@
 import { getAgents } from "@/lib/agents";
 import { runAcceptanceChecks } from "@/lib/challenge-runner";
 import { getChallenge } from "@/lib/challenges";
-import { saveEvaluation, saveRun, submitAttempt, updateAttempt } from "@/lib/attempts-store";
+import { saveEvaluation, savePostRunAnalysis, saveRun, submitAttempt, updateAttempt } from "@/lib/attempts-store";
+import { createPostRunAnalysis } from "@/lib/post-run-coach";
 import { computeEvaluation } from "@prompt-race/scoring";
 
 type Context = { params: Promise<{ attemptId: string }> };
@@ -62,7 +63,18 @@ export async function POST(_request: Request, { params }: Context) {
       evaluation: result,
     });
     await saveEvaluation(attemptId, result);
-    return Response.json({ result, checkResults, run });
+    let analysis;
+    try {
+      analysis = await createPostRunAnalysis(
+        { ...attempt, checkResults, evaluation: result },
+        challenge,
+      );
+      await savePostRunAnalysis(attemptId, analysis);
+    } catch (cause) {
+      // Coaching is optional guidance and must never fail an otherwise valid submission.
+      console.error("Post-run coaching failed", cause);
+    }
+    return Response.json({ result, checkResults, run, analysis });
   } catch (cause) {
     await updateAttempt(attemptId, { status: "failed" });
     return Response.json(

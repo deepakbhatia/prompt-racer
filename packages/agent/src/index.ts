@@ -7,7 +7,7 @@
  * Wire OpenAI (or compatible) client here; keep secrets in env only.
  */
 
-import type { AgentRole, ChallengeSpec, EvaluationResult, PromptTurn } from "@prompt-race/shared";
+import type { AgentRole, ChallengeSpec, EvaluationResult, PostRunAnalysis, PromptTurn } from "@prompt-race/shared";
 import type { BuilderToolEvent } from "./builder-loop";
 
 export const DEFAULT_MODEL = "gpt-5.6";
@@ -46,6 +46,22 @@ export interface EvaluatorInput {
   checkResults: { id: string; passed: boolean; detail: string }[];
 }
 
+export interface CoachInput {
+  attemptId: string;
+  challenge: ChallengeSpec;
+  /** The contestant's own trace only; content is bounded by the caller. */
+  prompts: Pick<PromptTurn, "index" | "role" | "content" | "tokensIn" | "tokensOut">[];
+  toolEvents: { sequence: number; type: string; name: string; path?: string; bytes?: number; at: string }[];
+  runs: { exitCode: number; durationMs: number; checks: { id: string; passed: boolean }[] }[];
+  evaluatorNotes: string[];
+  benchmarkSummary?: {
+    successfulAttempts: number;
+    medianPromptTurns: number;
+    medianPromptTokens: number;
+    firstWorkingRunMedianSec: number;
+  };
+}
+
 /** Placeholder interfaces — implement against your LLM provider next. */
 export interface PromptRaceAgents {
   scopeGuard(challenge: ChallengeSpec, userPrompt: string): Promise<ScopeGuardVerdict>;
@@ -57,6 +73,7 @@ export interface PromptRaceAgents {
     options?: BuilderOptions,
   ): Promise<BuilderResult>;
   evaluator(input: EvaluatorInput): Promise<Pick<EvaluationResult, "passed" | "functionalScore" | "notes" | "disqualificationReason">>;
+  coach(input: CoachInput): Promise<PostRunAnalysis>;
 }
 
 export { createOpenAIAgents } from "./agent";
@@ -93,6 +110,17 @@ export function roleSystemPrompt(role: AgentRole, challenge: ChallengeSpec): str
         "Be strict and evidence-based. Note prompt wastefulness only in notes, not as scope expansion.",
         `Acceptance:\n- ${challenge.acceptance.join("\n- ")}`,
       ].join("\n");
+    case "coach":
+      return [
+        "You are a post-run coach for a prompt-driven coding race.",
+        "Use only the provided contestant trace and aggregate metrics.",
+        "Reference exact prompt-turn numbers. Identify redundancy only when evidence exists.",
+        "Only describe top-runner patterns when aggregate benchmark metrics are supplied; never claim access to another contestant's private prompts.",
+        "Do not change, justify, or recommend changing the functional or leaderboard score.",
+        `Challenge: ${challenge.title}`,
+        `Brief: ${challenge.brief}`,
+        `Acceptance:\n- ${challenge.acceptance.join("\n- ")}`,
+      ].join("\n");
   }
 }
 
@@ -121,6 +149,17 @@ export function createStubAgents(): PromptRaceAgents {
         passed: functionalScore === 1,
         functionalScore,
         notes: ["Stub evaluator — replace with GPT-5.6 evaluator."],
+      };
+    },
+    async coach(input) {
+      const turns = input.prompts.filter((turn) => turn.role === "user").length;
+      return {
+        attemptId: input.attemptId,
+        summary: `You used ${turns} prompt turn${turns === 1 ? "" : "s"}.`,
+        timeLosses: [],
+        redundantPrompts: [],
+        recommendations: ["Run the challenge after each meaningful implementation step."],
+        topRunnerComparison: [],
       };
     },
   };

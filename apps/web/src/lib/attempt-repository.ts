@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { EvaluationResult, RaceAttempt, RunResult } from "@prompt-race/shared";
+import type { EvaluationResult, PostRunAnalysis, RaceAttempt, RunResult } from "@prompt-race/shared";
 import { sandboxPathFor } from "./sandbox";
 
 export interface StoredToolEvent {
@@ -21,6 +21,9 @@ export interface AttemptRepository {
   appendToolEvent(id: string, event: Omit<StoredToolEvent, "sequence" | "at">): Promise<void>;
   saveRun(result: RunResult): Promise<void>;
   saveEvaluation(id: string, result: EvaluationResult): Promise<void>;
+  savePostRunAnalysis(id: string, analysis: PostRunAnalysis): Promise<void>;
+  getToolEvents(id: string): Promise<StoredToolEvent[]>;
+  getRunResults(id: string): Promise<RunResult[]>;
 }
 
 type PersistedAttempt = Omit<RaceAttempt, "sandboxPath">;
@@ -73,6 +76,11 @@ export class InMemoryAttemptRepository implements AttemptRepository {
     this.runs.set(result.attemptId, [...(this.runs.get(result.attemptId) ?? []), result]);
   }
   async saveEvaluation(id: string, result: EvaluationResult) { await this.update(id, { evaluation: result }); }
+  async savePostRunAnalysis(id: string, analysis: PostRunAnalysis) {
+    await this.update(id, { postRunAnalysis: analysis });
+  }
+  async getToolEvents(id: string) { return [...(this.events.get(id) ?? [])]; }
+  async getRunResults(id: string) { return [...(this.runs.get(id) ?? [])]; }
 }
 
 /**
@@ -155,6 +163,17 @@ export class JsonFileAttemptRepository implements AttemptRepository {
   }
   async saveEvaluation(id: string, result: EvaluationResult) {
     await this.update(id, { evaluation: result });
+  }
+  async savePostRunAnalysis(id: string, analysis: PostRunAnalysis) {
+    await this.update(id, { postRunAnalysis: analysis });
+  }
+  async getToolEvents(id: string) {
+    await this.writes;
+    return [...((await this.load()).toolEvents[id] ?? [])];
+  }
+  async getRunResults(id: string) {
+    await this.writes;
+    return [...((await this.load()).runResults[id] ?? [])];
   }
 }
 

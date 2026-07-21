@@ -9,7 +9,7 @@ import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-tsx";
-import type { ChallengeSpec, EvaluationResult, RunCheckResult, RunResult } from "@prompt-race/shared";
+import type { ChallengeSpec, EvaluationResult, PostRunAnalysis, RunCheckResult, RunResult } from "@prompt-race/shared";
 import type { FeedItem } from "@/lib/workspace-types";
 
 function nowIso() {
@@ -60,6 +60,7 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [submission, setSubmission] = useState<{
     result: EvaluationResult;
     checkResults: RunCheckResult[];
+    analysis?: PostRunAnalysis;
   } | null>(null);
   const [preview, setPreview] = useState<{ url: string; expiresAt: string } | null>(null);
   const [startingPreview, setStartingPreview] = useState(false);
@@ -165,12 +166,13 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
       const data = (await response.json()) as {
         result?: EvaluationResult;
         checkResults?: RunCheckResult[];
+        analysis?: PostRunAnalysis;
         error?: string;
       };
       if (!response.ok || !data.result || !data.checkResults) {
         throw new Error(data.error ?? "Submission failed.");
       }
-      setSubmission({ result: data.result, checkResults: data.checkResults });
+      setSubmission({ result: data.result, checkResults: data.checkResults, analysis: data.analysis });
       pushFeed({ kind: "system", text: data.result.passed ? "Challenge submitted and passed." : "Challenge submitted." });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "Submission failed.");
@@ -438,6 +440,44 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
           <ul>
             {submission.result.notes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}
           </ul>
+          {submission.analysis && (
+            <section className="coach-panel" aria-label="Post-run AI analysis">
+              <h3>Post-run coaching</h3>
+              <p>{submission.analysis.summary}</p>
+              {submission.analysis.timeLosses.length > 0 && (
+                <>
+                  <h4>Where time was lost</h4>
+                  <ul>
+                    {submission.analysis.timeLosses.map((loss) => (
+                      <li key={`${loss.promptTurn}-${loss.issue}`}>Prompt turn {loss.promptTurn}: {loss.issue} ({loss.impact})</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {submission.analysis.redundantPrompts.length > 0 && (
+                <>
+                  <h4>Potentially redundant prompts</h4>
+                  <ul>
+                    {submission.analysis.redundantPrompts.map((finding) => (
+                      <li key={`${finding.promptTurn}-${finding.reason}`}>Prompt turn {finding.promptTurn}: {finding.reason}</li>
+                    ))}
+                  </ul>
+                </>
+              )}
+              {submission.analysis.recommendations.length > 0 && (
+                <>
+                  <h4>Recommendations</h4>
+                  <ul>{submission.analysis.recommendations.map((item) => <li key={item}>{item}</li>)}</ul>
+                </>
+              )}
+              {submission.analysis.topRunnerComparison.length > 0 && (
+                <>
+                  <h4>Aggregate benchmark patterns</h4>
+                  <ul>{submission.analysis.topRunnerComparison.map((item) => <li key={item}>{item}</li>)}</ul>
+                </>
+              )}
+            </section>
+          )}
         </section>
       )}
 
