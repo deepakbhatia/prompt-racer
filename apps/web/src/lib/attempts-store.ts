@@ -4,6 +4,7 @@ import { getAttemptRepository, type StoredToolEvent } from "./attempt-repository
 // Compatibility facade while routes migrate to the repository interface.
 export const saveAttempt = (attempt: RaceAttempt) => getAttemptRepository().create(attempt);
 export const getAttempt = (id: string) => getAttemptRepository().get(id);
+export const listCompletedAttempts = (limit = 12) => getAttemptRepository().listCompleted(limit);
 export const updateAttempt = (id: string, patch: Partial<RaceAttempt>) => getAttemptRepository().update(id, patch);
 export const submitAttempt = (id: string) => getAttemptRepository().submit(id);
 export const appendToolEvent = (id: string, event: Omit<StoredToolEvent, "sequence" | "at">) =>

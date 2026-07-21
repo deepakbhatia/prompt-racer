@@ -17,6 +17,7 @@ export interface StoredToolEvent {
 export interface AttemptRepository {
   create(attempt: RaceAttempt): Promise<void>;
   get(id: string): Promise<RaceAttempt | undefined>;
+  listCompleted(limit: number): Promise<RaceAttempt[]>;
   update(id: string, patch: Partial<RaceAttempt>): Promise<RaceAttempt | undefined>;
   submit(id: string): Promise<RaceAttempt | undefined>;
   appendToolEvent(id: string, event: Omit<StoredToolEvent, "sequence" | "at">): Promise<void>;
@@ -56,6 +57,12 @@ export class InMemoryAttemptRepository implements AttemptRepository {
 
   async create(attempt: RaceAttempt) { this.attempts.set(attempt.id, attempt); }
   async get(id: string) { return this.attempts.get(id); }
+  async listCompleted(limit: number) {
+    return [...this.attempts.values()]
+      .filter((attempt) => attempt.status === "passed" || attempt.status === "failed" || attempt.status === "disqualified")
+      .sort((a, b) => Date.parse(b.submittedAt ?? b.startedAt) - Date.parse(a.submittedAt ?? a.startedAt))
+      .slice(0, limit);
+  }
   async update(id: string, patch: Partial<RaceAttempt>) {
     const current = this.attempts.get(id);
     if (!current) return undefined;
@@ -129,6 +136,14 @@ export class JsonFileAttemptRepository implements AttemptRepository {
     await this.writes;
     const attempt = (await this.load()).attempts[id];
     return attempt ? hydrate(attempt) : undefined;
+  }
+  async listCompleted(limit: number) {
+    await this.writes;
+    return Object.values((await this.load()).attempts)
+      .filter((attempt) => attempt.status === "passed" || attempt.status === "failed" || attempt.status === "disqualified")
+      .sort((a, b) => Date.parse(b.submittedAt ?? b.startedAt) - Date.parse(a.submittedAt ?? a.startedAt))
+      .slice(0, limit)
+      .map(hydrate);
   }
   async update(id: string, patch: Partial<RaceAttempt>) {
     return this.mutate((data) => {

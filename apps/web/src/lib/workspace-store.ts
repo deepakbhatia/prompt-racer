@@ -4,6 +4,28 @@ import os from "node:os";
 import path from "node:path";
 import { createSandbox, listSandboxFiles, readSandboxFile, sandboxPathFor, writeSandboxFile } from "./sandbox";
 
+const STATIC_SERVER = `import { createReadStream } from "node:fs";
+import { stat } from "node:fs/promises";
+import http from "node:http";
+import path from "node:path";
+
+const root = process.cwd();
+const mime = { ".css": "text/css", ".html": "text/html", ".js": "text/javascript", ".json": "application/json" };
+http.createServer(async (request, response) => {
+  const pathname = new URL(request.url ?? "/", "http://localhost").pathname;
+  const relative = pathname === "/" ? "index.html" : pathname.replace(/^\\/+/, "");
+  const file = path.resolve(root, relative);
+  if (!file.startsWith(root + path.sep) && file !== root) return response.writeHead(403).end();
+  try {
+    if (!(await stat(file)).isFile()) throw new Error("Not a file");
+    response.setHeader("content-type", mime[path.extname(file)] ?? "application/octet-stream");
+    createReadStream(file).pipe(response);
+  } catch {
+    response.writeHead(404).end("Not found");
+  }
+}).listen(3000, "0.0.0.0");
+`;
+
 export interface WorkspaceStore {
   create(sandboxRef: string, challengeId: string): Promise<string>;
   withWorkspace<T>(sandboxRef: string, action: (sandboxPath: string) => Promise<T>): Promise<T>;
@@ -69,7 +91,23 @@ export class CloudStorageWorkspaceStore implements WorkspaceStore {
 
   async create(sandboxRef: string, challengeId: string) {
     return this.withWorkspace(sandboxRef, async (sandboxPath) => {
-      await writeSandboxFile(sandboxPath, "README.md", `# Attempt ${sandboxRef}\n\nChallenge: ${challengeId}\nBuilder writes files here.\n`);
+      const runContract = challengeId === "hello-http" || challengeId === "notes-api"
+        ? "\n\n## Platform run contract\n\nUse `npm run start`. The server must listen on port 3000 and accept connections on `0.0.0.0`.\n"
+        : challengeId === "reading-list"
+          ? "\n\n## Platform run contract\n\nUse `npm run start`. The included static server serves `index.html` on port 3000. Build this challenge with browser-native HTML, CSS, and JavaScript; do not add framework dependencies.\n"
+          : "";
+      await writeSandboxFile(sandboxPath, "README.md", `# Attempt ${sandboxRef}\n\nChallenge: ${challengeId}\nBuilder writes files here.${runContract}`);
+      if (challengeId === "hello-http" || challengeId === "notes-api" || challengeId === "reading-list") {
+        await writeSandboxFile(sandboxPath, "package.json", `${JSON.stringify({
+          name: challengeId,
+          private: true,
+          ...(challengeId === "reading-list" ? { type: "module" } : {}),
+          scripts: { start: "node server.js" },
+        }, null, 2)}\n`);
+      }
+      if (challengeId === "reading-list") {
+        await writeSandboxFile(sandboxPath, "server.js", STATIC_SERVER);
+      }
       return sandboxPath;
     });
   }

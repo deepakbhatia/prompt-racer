@@ -56,7 +56,10 @@ export async function startHttpRun(input: {
   const image = resolveApprovedRunnerImage(input.image);
   const sandboxPath = path.resolve(input.sandboxPath);
   const launch = await runDocker([
-    "run", "-d", "--rm",
+    // Do not use --rm here. A server that exits before readiness would be
+    // deleted immediately, hiding its startup logs and producing a misleading
+    // "No such container" error during cleanup. stop() always removes it.
+    "run", "-d",
     "--cap-drop", "ALL",
     "--security-opt", "no-new-privileges",
     "--memory=256m", "--cpus=0.5", "--pids-limit=64",
@@ -89,6 +92,8 @@ export async function startHttpRun(input: {
       if (stopped) return { stdout: "", stderr: "" };
       stopped = true;
       const logs = await runDocker(["logs", containerId]);
+      // Cleanup is best-effort; preserve the program's logs rather than a
+      // secondary Docker cleanup error as the user-facing failure.
       await runDocker(["rm", "-f", containerId]);
       return { stdout: logs.stdout, stderr: logs.stderr };
     },

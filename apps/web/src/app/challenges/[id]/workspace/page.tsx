@@ -44,6 +44,9 @@ export default async function WorkspacePage({ params }: Props) {
       <WorkspaceClient challenge={challenge} />
 
       <div className="cta" style={{ marginTop: "2rem" }}>
+        <Link href="/" className="secondary">
+          Home
+        </Link>
         <Link href="/challenges" className="secondary">
           All challenges
         </Link>

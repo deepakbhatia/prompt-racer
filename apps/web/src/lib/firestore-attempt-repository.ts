@@ -31,6 +31,13 @@ export class FirestoreAttemptRepository implements AttemptRepository {
     const snapshot = await this.attempt(id).get();
     return snapshot.exists ? hydrate(snapshot.data() as PersistedAttempt) : undefined;
   }
+  async listCompleted(limit: number) {
+    const snapshot = await this.db.collection("attempts").orderBy("submittedAt", "desc").limit(limit * 3).get();
+    return snapshot.docs
+      .map((document) => hydrate(document.data() as PersistedAttempt))
+      .filter((attempt) => attempt.status === "passed" || attempt.status === "failed" || attempt.status === "disqualified")
+      .slice(0, limit);
+  }
   async update(id: string, patch: Partial<RaceAttempt>) {
     const ref = this.attempt(id);
     const snapshot = await ref.get();

@@ -3,6 +3,7 @@ node_modules/
 .pnpm-store/
 .yarn/
 .npm/
+.npmrc
 
 # Build / generated
 dist/

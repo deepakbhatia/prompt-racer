@@ -29,7 +29,7 @@ const RUNTIME_PROFILES: Record<string, ChallengeRuntimeProfile> = {
   "reading-list": {
     kind: "browser",
     image: "prompt-race/web-preview:22",
-    command: ["npm", "run", "dev"],
+    command: ["npm", "run", "start"],
     port: 3000,
     readiness: { path: "/", expectedStatus: 200 },
     timeoutMs: 20_000,

@@ -1,0 +1,77 @@
+name: Runner images
+
+on:
+  push:
+    branches: [main]
+    paths: ["containers/**", ".github/workflows/runner-images.yml"]
+  pull_request:
+    paths: ["containers/**", ".github/workflows/runner-images.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_PREFIX: ghcr.io/${{ github.repository_owner }}/prompt-race
+
+jobs:
+  build-smoke-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: node-cli
+            dockerfile: containers/node-cli/Dockerfile
+            base_arg: NODE_IMAGE
+            base_image: ${{ vars.RUNNER_NODE_BASE_IMAGE }}
+          - name: node-http
+            dockerfile: containers/node-http/Dockerfile
+            base_arg: NODE_IMAGE
+            base_image: ${{ vars.RUNNER_NODE_BASE_IMAGE }}
+          - name: web-preview
+            dockerfile: containers/web-preview/Dockerfile
+            base_arg: NODE_IMAGE
+            base_image: ${{ vars.RUNNER_NODE_BASE_IMAGE }}
+          - name: playwright
+            dockerfile: containers/playwright/Dockerfile
+            base_arg: PLAYWRIGHT_IMAGE
+            base_image: ${{ vars.RUNNER_PLAYWRIGHT_BASE_IMAGE }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require immutable base image
+        run: |
+          test -n "${{ matrix.base_image }}"
+          case "${{ matrix.base_image }}" in *@sha256:*) ;; *) exit 1 ;; esac
+      - name: Build
+        run: >-
+          docker build
+          --build-arg ${{ matrix.base_arg }}=${{ matrix.base_image }}
+          --tag ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.sha }}
+          --file ${{ matrix.dockerfile }} .
+      - name: Smoke test runtime
+        run: docker run --rm ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.sha }} node --version
+      - name: Scan image
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          image-ref: ${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+      - name: Login to registry
+        if: github.event_name == 'push'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Push immutable build and record digest
+        if: github.event_name == 'push'
+        run: |
+          image="${{ env.IMAGE_PREFIX }}/${{ matrix.name }}:${{ github.sha }}"
+          docker push "$image"
+          digest="$(docker inspect --format='{{index .RepoDigests 0}}' "$image")"
+          printf '%s\n' "$digest" | tee -a "$GITHUB_STEP_SUMMARY"

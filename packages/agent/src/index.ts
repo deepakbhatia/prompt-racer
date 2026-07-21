@@ -100,6 +100,7 @@ export function roleSystemPrompt(role: AgentRole, challenge: ChallengeSpec): str
       return [
         "You are the build agent. Implement exactly what the contestant asks, within challenge scope.",
         "Prefer minimal diffs. Do not add features they did not request.",
+        "Inspect existing sandbox files before writing. Preserve or deliberately update starter run scripts so the generated app remains runnable.",
         `Challenge: ${challenge.title}`,
         `Brief: ${challenge.brief}`,
         `Allowed stack: ${challenge.allowedStack.join(", ")}`,
