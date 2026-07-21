@@ -37,6 +37,10 @@ export interface RaceAttempt {
   status: "running" | "submitted" | "passed" | "failed" | "disqualified";
   startedAt: string;
   submittedAt?: string;
+  /** Deterministic evidence captured when the attempt was submitted. */
+  checkResults?: RunCheckResult[];
+  /** Final, deterministic leaderboard result for a completed attempt. */
+  evaluation?: EvaluationResult;
   prompts: PromptTurn[];
   /** Working directory for this attempt (sandbox). */
   sandboxPath: string;
@@ -58,6 +62,55 @@ export interface EvaluationResult {
   notes: string[];
   disqualificationReason?: string;
 }
+
+/** Output from a platform-owned command run for one attempt. */
+export interface RunResult {
+  attemptId: string;
+  startedAt: string;
+  finishedAt: string;
+  exitCode: number;
+  stdout: string;
+  stderr: string;
+  checks?: RunCheckResult[];
+}
+
+/** A normalized, deterministic result from a platform-owned acceptance probe. */
+export interface RunCheckResult {
+  id: string;
+  passed: boolean;
+  detail: string;
+}
+
+/**
+ * Server-only runner configuration. This is never accepted from the browser or
+ * included in a public ChallengeSpec.
+ */
+export type ChallengeRuntimeProfile =
+  | {
+      kind: "cli";
+      image: "prompt-race/node-cli:22";
+      command: ["npm", "run", string];
+      timeoutMs: number;
+    }
+  | {
+      kind: "http";
+      image: "prompt-race/node-http:22";
+      command: ["npm", "run", string];
+      port: number;
+      readiness: { path: string; expectedStatus: number };
+      timeoutMs: number;
+    }
+  | {
+      kind: "browser";
+      image: "prompt-race/web-preview:22";
+      command: ["npm", "run", string];
+      port: number;
+      readiness: { path: string; expectedStatus: number };
+      timeoutMs: number;
+    };
+
+/** @deprecated Use ChallengeRuntimeProfile. */
+export type RunProfile = Extract<ChallengeRuntimeProfile, { kind: "cli" }>;
 
 export interface Race {
   id: string;

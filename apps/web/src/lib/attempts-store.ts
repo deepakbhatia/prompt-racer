@@ -24,3 +24,19 @@ export function updateAttempt(id: string, patch: Partial<RaceAttempt>) {
   attempts.set(id, next);
   return next;
 }
+
+/**
+ * Local compare-and-set transition. A database implementation must perform the
+ * equivalent conditional update in one transaction.
+ */
+export function submitAttempt(id: string) {
+  const current = attempts.get(id);
+  if (!current || current.status !== "running") return undefined;
+  const submitted: RaceAttempt = {
+    ...current,
+    status: "submitted",
+    submittedAt: new Date().toISOString(),
+  };
+  attempts.set(id, submitted);
+  return submitted;
+}

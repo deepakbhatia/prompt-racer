@@ -9,7 +9,7 @@ import "prismjs/components/prism-jsx";
 import "prismjs/components/prism-markdown";
 import "prismjs/components/prism-typescript";
 import "prismjs/components/prism-tsx";
-import type { ChallengeSpec, RunResult } from "@prompt-race/shared";
+import type { ChallengeSpec, EvaluationResult, RunCheckResult, RunResult } from "@prompt-race/shared";
 import type { FeedItem } from "@/lib/workspace-types";
 
 function nowIso() {
@@ -57,9 +57,14 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   const [source, setSource] = useState<string | null>(null);
   const [loadingFiles, setLoadingFiles] = useState(false);
   const [runResult, setRunResult] = useState<RunResult | null>(null);
+  const [submission, setSubmission] = useState<{
+    result: EvaluationResult;
+    checkResults: RunCheckResult[];
+  } | null>(null);
   const [preview, setPreview] = useState<{ url: string; expiresAt: string } | null>(null);
   const [startingPreview, setStartingPreview] = useState(false);
   const [running, setRunning] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const hasStartedAttempt = useRef(false);
@@ -151,6 +156,29 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
     }
   }
 
+  async function submitAttempt() {
+    if (!attemptId || submitting || pending || submission) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const response = await fetch(`/api/attempts/${attemptId}/submit`, { method: "POST" });
+      const data = (await response.json()) as {
+        result?: EvaluationResult;
+        checkResults?: RunCheckResult[];
+        error?: string;
+      };
+      if (!response.ok || !data.result || !data.checkResults) {
+        throw new Error(data.error ?? "Submission failed.");
+      }
+      setSubmission({ result: data.result, checkResults: data.checkResults });
+      pushFeed({ kind: "system", text: data.result.passed ? "Challenge submitted and passed." : "Challenge submitted." });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "Submission failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   useEffect(() => {
     if (hasStartedAttempt.current) return;
     hasStartedAttempt.current = true;
@@ -180,7 +208,7 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const text = prompt.trim();
-    if (!text || !attemptId || pending) return;
+    if (!text || !attemptId || pending || submission) return;
 
     setPrompt("");
     setPending(true);
@@ -356,6 +384,9 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
           <button type="button" onClick={() => void runAttempt()} disabled={!attemptId || running}>
             {running ? "Running…" : "Run challenge"}
           </button>
+          <button type="button" onClick={() => void submitAttempt()} disabled={!attemptId || pending || submitting || !!submission}>
+            {submitting ? "Submitting…" : submission ? "Submitted" : "Submit challenge"}
+          </button>
         </div>
         {runResult ? (
           <>
@@ -393,6 +424,23 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
         )}
       </section>
 
+      {submission && (
+        <section className="submission-panel" aria-label="Submission result">
+          <h2>{submission.result.passed ? "Challenge passed" : "Challenge not passed"}</h2>
+          <p>Score: {submission.result.compositeScore.toFixed(3)} · Functional: {(submission.result.functionalScore * 100).toFixed(0)}%</p>
+          <h3>Checks</h3>
+          <ul>
+            {submission.checkResults.map((check) => (
+              <li key={check.id}>{check.passed ? "✓" : "×"} {check.id}: {check.detail}</li>
+            ))}
+          </ul>
+          <h3>Evaluator notes</h3>
+          <ul>
+            {submission.result.notes.map((note, index) => <li key={`${index}-${note}`}>{note}</li>)}
+          </ul>
+        </section>
+      )}
+
       <form className="prompt-form" onSubmit={onSubmit}>
         <label htmlFor="prompt">Prompt</label>
         <textarea
@@ -401,10 +449,10 @@ export function WorkspaceClient({ challenge }: { challenge: ChallengeSpec }) {
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           placeholder="Describe what to build…"
-          disabled={pending || !attemptId}
+          disabled={pending || !attemptId || !!submission}
         />
-        <button type="submit" disabled={pending || !attemptId || !prompt.trim()}>
-          {pending ? "Working…" : attemptId ? "Send prompt" : "Preparing sandbox…"}
+        <button type="submit" disabled={pending || !attemptId || !prompt.trim() || !!submission}>
+          {submission ? "Challenge submitted" : pending ? "Working…" : attemptId ? "Send prompt" : "Preparing sandbox…"}
         </button>
       </form>
 
