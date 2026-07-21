@@ -8,7 +8,7 @@ type Ctx = { params: Promise<{ attemptId: string }> };
 
 export async function POST(req: Request, ctx: Ctx) {
   const { attemptId } = await ctx.params;
-  const attempt = getAttempt(attemptId);
+  const attempt = await getAttempt(attemptId);
   if (!attempt || attempt.status !== "running") {
     return NextResponse.json({ error: "Attempt not found or not running" }, { status: 404 });
   }
@@ -56,7 +56,7 @@ export async function POST(req: Request, ctx: Ctx) {
     at,
   };
 
-  const updated = updateAttempt(attemptId, {
+  const updated = await updateAttempt(attemptId, {
     prompts: [...attempt.prompts, userTurn, assistantTurn],
   });
 

@@ -1,6 +1,6 @@
 import { getAgents } from "@/lib/agents";
 import { getChallenge } from "@/lib/challenges";
-import { getAttempt, updateAttempt } from "@/lib/attempts-store";
+import { appendToolEvent, getAttempt, updateAttempt } from "@/lib/attempts-store";
 import type { PromptTurn } from "@prompt-race/shared";
 
 type Ctx = { params: Promise<{ attemptId: string }> };
@@ -9,7 +9,7 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request, ctx: Ctx) {
   const { attemptId } = await ctx.params;
-  const attempt = getAttempt(attemptId);
+  const attempt = await getAttempt(attemptId);
   if (!attempt || attempt.status !== "running") {
     return Response.json(
       { error: "Attempt not found or no longer running. Start the challenge again." },
@@ -46,12 +46,24 @@ export async function POST(req: Request, ctx: Ctx) {
       send({ type: "guard", allowed: true });
 
       try {
+        const toolEvents: Promise<void>[] = [];
         const result = await agents.builder(
           challenge,
           attempt.prompts,
           verdict.sanitizedPrompt ?? prompt,
           attempt.sandboxPath,
-          { onEvent: send },
+          {
+            onEvent: (event) => {
+              send(event);
+              toolEvents.push(appendToolEvent(attemptId, {
+                type: event.type,
+                name: event.name,
+                path: "path" in event ? event.path : undefined,
+                bytes: event.type === "tool_end" ? event.bytes : undefined,
+                error: event.type === "tool_error" ? event.error : undefined,
+              }));
+            },
+          },
         );
         if (result.assistantMessage) send({ type: "delta", text: result.assistantMessage });
 
@@ -70,7 +82,8 @@ export async function POST(req: Request, ctx: Ctx) {
           tokensOut: result.tokensOut,
           at,
         };
-        updateAttempt(attemptId, {
+        await Promise.all(toolEvents);
+        await updateAttempt(attemptId, {
           prompts: [...attempt.prompts, userTurn, assistantTurn],
         });
 

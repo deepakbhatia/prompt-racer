@@ -5,7 +5,7 @@ type Context = { params: Promise<{ attemptId: string; filePath: string[] }> };
 
 export async function GET(_request: Request, { params }: Context) {
   const { attemptId, filePath } = await params;
-  const attempt = getAttempt(attemptId);
+  const attempt = await getAttempt(attemptId);
   if (!attempt) return Response.json({ error: "Attempt not found." }, { status: 404 });
 
   try {

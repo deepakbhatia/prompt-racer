@@ -1,7 +1,7 @@
 import { getAgents } from "@/lib/agents";
 import { runAcceptanceChecks } from "@/lib/challenge-runner";
 import { getChallenge } from "@/lib/challenges";
-import { submitAttempt, updateAttempt } from "@/lib/attempts-store";
+import { saveEvaluation, saveRun, submitAttempt, updateAttempt } from "@/lib/attempts-store";
 import { computeEvaluation } from "@prompt-race/scoring";
 
 type Context = { params: Promise<{ attemptId: string }> };
@@ -11,17 +11,18 @@ export const runtime = "nodejs";
 /** Finalizes an attempt. This is the only transition from building to scoring. */
 export async function POST(_request: Request, { params }: Context) {
   const { attemptId } = await params;
-  const attempt = submitAttempt(attemptId);
+  const attempt = await submitAttempt(attemptId);
   if (!attempt) return Response.json({ error: "Attempt is not running." }, { status: 409 });
 
   const challenge = getChallenge(attempt.challengeId);
   if (!challenge) {
-    updateAttempt(attemptId, { status: "failed" });
+    await updateAttempt(attemptId, { status: "failed" });
     return Response.json({ error: "Challenge not found." }, { status: 404 });
   }
 
   try {
     const run = await runAcceptanceChecks(attempt);
+    await saveRun(run);
     const checkResults = run.checks ?? [{
       id: "runner-exit",
       passed: run.exitCode === 0,
@@ -55,14 +56,15 @@ export async function POST(_request: Request, { params }: Context) {
       disqualificationReason: qualitative.disqualificationReason,
     });
 
-    updateAttempt(attemptId, {
+    await updateAttempt(attemptId, {
       status: result.passed ? "passed" : "failed",
       checkResults,
       evaluation: result,
     });
+    await saveEvaluation(attemptId, result);
     return Response.json({ result, checkResults, run });
   } catch (cause) {
-    updateAttempt(attemptId, { status: "failed" });
+    await updateAttempt(attemptId, { status: "failed" });
     return Response.json(
       { error: cause instanceof Error ? cause.message : "Submission failed." },
       { status: 502 },

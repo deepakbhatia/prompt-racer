@@ -26,10 +26,11 @@ export async function POST(req: Request) {
     challengeId: challenge.id,
     status: "running",
     startedAt: new Date().toISOString(),
+    sandboxRef: `${raceId}/${attemptId}`,
     prompts: [],
     sandboxPath,
   };
 
-  saveAttempt(attempt);
+  await saveAttempt(attempt);
   return NextResponse.json({ attempt });
 }

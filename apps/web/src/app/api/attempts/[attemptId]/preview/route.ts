@@ -12,7 +12,7 @@ const PREVIEW_LIFETIME_MS = 10 * 60_000;
 /** Starts a short-lived, attempt-owned browser preview on a loopback-only port. */
 export async function POST(_request: Request, { params }: Context) {
   const { attemptId } = await params;
-  const attempt = getAttempt(attemptId);
+  const attempt = await getAttempt(attemptId);
   if (!attempt) return Response.json({ error: "Attempt not found." }, { status: 404 });
 
   const profile = getRuntimeProfile(attempt.challengeId);

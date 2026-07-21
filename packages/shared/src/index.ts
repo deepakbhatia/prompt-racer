@@ -37,12 +37,14 @@ export interface RaceAttempt {
   status: "running" | "submitted" | "passed" | "failed" | "disqualified";
   startedAt: string;
   submittedAt?: string;
+  /** Durable, storage-neutral sandbox identifier (for example `solo/<attemptId>`). */
+  sandboxRef: string;
   /** Deterministic evidence captured when the attempt was submitted. */
   checkResults?: RunCheckResult[];
   /** Final, deterministic leaderboard result for a completed attempt. */
   evaluation?: EvaluationResult;
   prompts: PromptTurn[];
-  /** Working directory for this attempt (sandbox). */
+  /** Ephemeral host path, resolved from sandboxRef by the server only. */
   sandboxPath: string;
 }
 
